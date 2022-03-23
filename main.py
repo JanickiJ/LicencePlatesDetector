@@ -2,11 +2,13 @@
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
+from datetime import datetime
+import os
 
 def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+    f = open("/home/pi/code/LicencePlatesDetector/logs.txt", "a")
+    now = datetime.now()
+    f.write(f"\nLOGGING {now}")
 
 
 # Press the green button in the gutter to run the script.
