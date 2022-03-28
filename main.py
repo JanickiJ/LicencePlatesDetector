@@ -1,11 +1,9 @@
+from time import sleep
+from config import Config as config
 from imutils.object_detection import non_max_suppression
 import cv2
 import numpy as np
-
-MIN_CONFIDENCE = 0.5
-NETWORK_MODEL_PATH = "east_text_detection_model.pb"
-NETWORK_IMAGE_WIDTH = 320  # must be multiple of 32
-NETWORK_IMAGE_HEIGHT = 320  # must be multiple of 32
+from logger import console_logger
 
 
 def decode_predictions(scores, geometry):
@@ -20,84 +18,85 @@ def decode_predictions(scores, geometry):
         # extract the scores (probabilities), followed by the
         # geometrical data used to derive potential bounding box
         # coordinates that surround text
-        scoresData = scores[0, 0, y]
-        xData0 = geometry[0, 0, y]
-        xData1 = geometry[0, 1, y]
-        xData2 = geometry[0, 2, y]
-        xData3 = geometry[0, 3, y]
-        anglesData = geometry[0, 4, y]
+        scores_data = scores[0, 0, y]
+        x_data0 = geometry[0, 0, y]
+        x_data1 = geometry[0, 1, y]
+        x_data2 = geometry[0, 2, y]
+        x_data3 = geometry[0, 3, y]
+        angles_data = geometry[0, 4, y]
         # loop over the number of columns
         for x in range(0, numCols):
             # if our score does not have sufficient probability,
             # ignore it
-            if scoresData[x] < MIN_CONFIDENCE:
+            if scores_data[x] < config.MIN_CONFIDENCE:
                 continue
             # compute the offset factor as our resulting feature
             # maps will be 4x smaller than the input image
             (offsetX, offsetY) = (x * 4.0, y * 4.0)
             # extract the rotation angle for the prediction and
             # then compute the sin and cosine
-            angle = anglesData[x]
+            angle = angles_data[x]
             cos = np.cos(angle)
             sin = np.sin(angle)
             # use the geometry volume to derive the width and height
             # of the bounding box
-            h = xData0[x] + xData2[x]
-            w = xData1[x] + xData3[x]
+            h = x_data0[x] + x_data2[x]
+            w = x_data1[x] + x_data3[x]
             # compute both the starting and ending (x, y)-coordinates
             # for the text prediction bounding box
-            endX = int(offsetX + (cos * xData1[x]) + (sin * xData2[x]))
-            endY = int(offsetY - (sin * xData1[x]) + (cos * xData2[x]))
-            startX = int(endX - w)
-            startY = int(endY - h)
+            end_x = int(offsetX + (cos * x_data1[x]) + (sin * x_data2[x]))
+            end_y = int(offsetY - (sin * x_data1[x]) + (cos * x_data2[x]))
+            start_x = int(end_x - w)
+            start_y = int(end_y - h)
             # add the bounding box coordinates and probability score
             # to our respective lists
-            rects.append((startX, startY, endX, endY))
-            confidences.append(scoresData[x])
+            rects.append((start_x, start_y, end_x, end_y))
+            confidences.append(scores_data[x])
     # return a tuple of the bounding boxes and associated confidences
     return rects, confidences
 
 
-def main():
+def camera():
     # place an object with text in front of webcam and check results
     # press 'q' to stop the program
-    print("[INFO] loading EAST text detector...")
-    net = cv2.dnn.readNet(NETWORK_MODEL_PATH)
-    print("[INFO] start capturing webcam...")
+    console_logger.info("loading EAST text detector...")
+    net = cv2.dnn.readNet(config.NETWORK_MODEL_PATH)
+    console_logger.info("start capturing webcam...")
     cap = cv2.VideoCapture(0)
     while cap.isOpened():
         ret, image = cap.read()
         orig = image.copy()
         (H, W) = image.shape[:2]
-        width_ratio = W / float(NETWORK_IMAGE_WIDTH)
-        height_ratio = H / float(NETWORK_IMAGE_HEIGHT)
+        width_ratio = W / float(config.NETWORK_IMAGE_WIDTH)
+        height_ratio = H / float(config.NETWORK_IMAGE_HEIGHT)
 
         # resize the image and grab the new image dimensions
-        network_image = cv2.resize(image, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT))
-        layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
+        network_image = cv2.resize(image, (config.NETWORK_IMAGE_WIDTH, config.NETWORK_IMAGE_HEIGHT))
+        layer_names = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
 
-        print("[INFO] converting image to blob...")
-        blob = cv2.dnn.blobFromImage(network_image, 1.0, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT),
+        console_logger.info("converting image to blob...")
+        blob = cv2.dnn.blobFromImage(network_image, 1.0, (config.NETWORK_IMAGE_WIDTH, config.NETWORK_IMAGE_HEIGHT),
                                      (123.68, 116.78, 103.94), swapRB=True, crop=False)
 
         net.setInput(blob)
-        scores, geometry = net.forward(layerNames)
+        scores, geometry = net.forward(layer_names)
         rects, confidences = decode_predictions(scores=scores, geometry=geometry)
         boxes = non_max_suppression(np.array(rects), probs=confidences)
         # loop over the bounding boxes
-        for (startX, startY, endX, endY) in boxes:
+        for (start_x, start_y, end_x, end_y) in boxes:
             # scale the bounding box coordinates based on saved ratios
-            startX = int(startX * width_ratio)
-            startY = int(startY * height_ratio)
-            endX = int(endX * width_ratio)
-            endY = int(endY * height_ratio)
-            # draw gren rect
-            cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
+            start_x = int(start_x * width_ratio)
+            start_y = int(start_y * height_ratio)
+            end_x = int(end_x * width_ratio)
+            end_y = int(end_y * height_ratio)
+            # draw green rect
+            cv2.rectangle(orig, (start_x, start_y), (end_x, end_y), (0, 255, 0), 2)
 
         cv2.imshow('Webcam', orig)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        sleep(0.1)
 
 
 if __name__ == '__main__':
-    main()
+    camera()
