@@ -51,13 +51,14 @@ def video_feed():
     return Response(generate(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 
-if __name__ == '__main__':
+def web_app(host, port):
     textAreaDetector.loadNet()
-    host = '0.0.0.0'
-    port = '8080'
     t = threading.Thread(target=read_data)
     t.daemon = True
     t.start()
     app.run(host=host, port=port, debug=True, threaded=True, use_reloader=False)
+
+if __name__ == '__main__':
+    web_app('0.0.0.0', '8080')
 
 vs.stop()

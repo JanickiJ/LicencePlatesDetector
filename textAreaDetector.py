@@ -1,11 +1,7 @@
 from imutils.object_detection import non_max_suppression
 import cv2
 import numpy as np
-
-MIN_CONFIDENCE = 0.5
-NETWORK_MODEL_PATH = "east_text_detection_model.pb"  
-NETWORK_IMAGE_WIDTH = 320 # must be multiple of 32
-NETWORK_IMAGE_HEIGHT = 320 # must be multiple of 32
+from config import MIN_CONFIDENCE, NETWORK_MODEL_PATH, NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT
 
 net = None
 
@@ -73,7 +69,6 @@ def textAreas(image):
     network_image = cv2.resize(image, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT))
     layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
 
-    print("[INFO] converting image to blob...")
     blob = cv2.dnn.blobFromImage(network_image, 1.0, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT),
                             (123.68, 116.78, 103.94), swapRB=True, crop=False)
 
