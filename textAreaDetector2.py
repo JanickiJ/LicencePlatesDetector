@@ -5,6 +5,9 @@ import imutils
 import cv2
 
 
+def set_windows_tess_path():
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 class LicencePlatesParser:
     def __init__(self, debug=False):
         self.debug = debug
