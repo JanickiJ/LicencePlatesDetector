@@ -8,7 +8,8 @@ import cv2
 def set_windows_tess_path():
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-class LicencePlatesParser:
+
+class LicencePlatesParser2:
     def __init__(self, debug=False):
         self.debug = debug
 
@@ -48,15 +49,15 @@ class LicencePlatesParser:
         debug_image = None
         try:
             mask = np.zeros(gray_image.shape, np.uint8)
-            new_image = cv2.drawContours(mask, [location], 0, 255, -1)
-            new_image = cv2.bitwise_and(frame, frame, mask=mask)
+            cv2.drawContours(mask, [location], 0, 255, -1)
+            cv2.bitwise_and(frame, frame, mask=mask)
             (x, y) = np.where(mask == 255)
             (x1, y1) = (np.min(x), np.min(y))
             (x2, y2) = (np.max(x), np.max(y))
             cropped_image = gray_image[x1:x2 + 1, y1:y2 + 1]
             if self.debug:
                 debug_image = cv2.rectangle(frame.copy(), (y2, x2), (y1, x1), (0, 255, 0), 3)
-        except:
+        except Exception as ex:
             pass
         return cropped_image, debug_image
 

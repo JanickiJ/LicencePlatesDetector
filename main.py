@@ -6,15 +6,15 @@ from flask import jsonify
 import threading
 import time
 import cv2
-from textAreaDetector2 import LicencePlatesParser
+from textAreaDetector2 import LicencePlatesParser2
 
 plate_chars = "hurr"
 output_frame = None
 lock = threading.Lock()
 app = Flask(__name__)
-vs = VideoStream(src=1).start()
+vs = VideoStream().start()
 time.sleep(2.0) # for warm up
-parser = LicencePlatesParser()
+parser = LicencePlatesParser2()
 
 @app.route("/")
 def index():
