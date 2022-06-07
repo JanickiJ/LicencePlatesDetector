@@ -3,14 +3,59 @@ import pytesseract
 from imutils.object_detection import non_max_suppression
 import cv2
 import numpy as np
-from config import MIN_CONFIDENCE, NETWORK_MODEL_PATH, NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT
+from src.config.config import MIN_CONFIDENCE, NETWORK_MODEL_PATH, NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT
 
 
-class LicencePlatesParser1:
-    def __init__(self):
+class DetectorTextFields:
+    def __init__(self, debug=False):
         self.net = cv2.dnn.readNet(NETWORK_MODEL_PATH)
+        self.debug = debug
 
-    def decode_predictions(self, scores, geometry):
+    def run(self, image):
+        locations = self.get_text_areas(image)
+        texts = []
+        for location in locations:
+            try:
+                cropped_image = self.crop_plate(image, location)
+                if cropped_image is not None:
+                    text_from_image = self.image_to_text(cropped_image)
+                    parsed_text = self.parse_text(text_from_image)
+                    if parsed_text:
+                        texts.append(parsed_text)
+                    if self.debug:
+                        cv2.rectangle(image, (location[0], location[1]), (location[2], location[3]), (0, 255, 0), 2)
+            except Exception as ex:
+                print(ex)
+        return texts, image
+
+    def get_text_areas(self, image):
+        (H, W) = image.shape[:2]
+        width_ratio = W / float(NETWORK_IMAGE_WIDTH)
+        height_ratio = H / float(NETWORK_IMAGE_HEIGHT)
+
+        # resize the image and grab the new image dimensions
+        network_image = cv2.resize(image, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT))
+        layer_names = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
+
+        blob = cv2.dnn.blobFromImage(network_image, 1.0, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT),
+                                     (123.68, 116.78, 103.94), swapRB=True, crop=False)
+
+        self.net.setInput(blob)
+        scores, geometry = self.net.forward(layer_names)
+        rects, confidences = self.decode_predictions(scores=scores, geometry=geometry)
+        boxes = non_max_suppression(np.array(rects), probs=confidences)
+        result = []
+        for (start_x, start_y, end_x, end_y) in boxes:
+            start_x = int(start_x * width_ratio)
+            start_y = int(start_y * height_ratio)
+            end_x = int(end_x * width_ratio)
+            end_y = int(end_y * height_ratio)
+            result.append((start_x, start_y, end_x, end_y))
+
+        return result
+
+    @staticmethod
+    def decode_predictions(scores, geometry):
         # grab the number of rows and columns from the scores volume, then
         # initialize our set of bounding box rectangles and corresponding
         # confidence scores
@@ -57,34 +102,10 @@ class LicencePlatesParser1:
                 rects.append((startX, startY, endX, endY))
                 confidences.append(scoresData[x])
         # return a tuple of the bounding boxes and associated confidences
-        return (rects, confidences)
+        return rects, confidences
 
-    def get_text_areas(self, image):
-        (H, W) = image.shape[:2]
-        width_ratio = W / float(NETWORK_IMAGE_WIDTH)
-        height_ratio = H / float(NETWORK_IMAGE_HEIGHT)
-
-        # resize the image and grab the new image dimensions
-        network_image = cv2.resize(image, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT))
-        layer_names = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
-
-        blob = cv2.dnn.blobFromImage(network_image, 1.0, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT),
-                                     (123.68, 116.78, 103.94), swapRB=True, crop=False)
-
-        self.net.setInput(blob)
-        scores, geometry = self.net.forward(layer_names)
-        rects, confidences = self.decode_predictions(scores=scores, geometry=geometry)
-        boxes = non_max_suppression(np.array(rects), probs=confidences)
-        result = []
-        for (start_x, start_y, end_x, end_y) in boxes:
-            start_x = int(start_x * width_ratio)
-            start_y = int(start_y * height_ratio)
-            end_x = int(end_x * width_ratio)
-            end_y = int(end_y * height_ratio)
-            result.append((start_x, start_y, end_x, end_y))
-        return result
-
-    def crop_plate(self, frame, location):
+    @staticmethod
+    def crop_plate(frame, location):
         cropped_image = None
         try:
             cropped_image = frame[location[1]:location[3], location[0]:location[2]]
@@ -92,25 +113,12 @@ class LicencePlatesParser1:
             print(ex)
         return cropped_image
 
-    def image_to_text(self, cropped_image):
+    @staticmethod
+    def image_to_text(cropped_image):
         return pytesseract.image_to_string(cropped_image, config='--psm 7')
 
-    def parse_text(self, text):
+    @staticmethod
+    def parse_text(text):
         parsed_text = re.sub(r'[^A-Z0-9]', '', text)
         if len(parsed_text) > 2:
             return parsed_text
-
-    def run(self, image):
-        locations = self.get_text_areas(image)
-        texts = []
-        for location in locations:
-            try:
-                cropped_image = self.crop_plate(image, location)
-                if cropped_image is not None:
-                    text_from_image = self.image_to_text(cropped_image)
-                    parsed_text = self.parse_text(text_from_image)
-                    if parsed_text:
-                        texts.append(parsed_text)
-            except Exception as ex:
-                print(ex)
-        return texts

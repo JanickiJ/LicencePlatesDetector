@@ -9,7 +9,7 @@ def set_windows_tess_path():
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
-class LicencePlatesParser2:
+class DetectorLicencePlates:
     def __init__(self, debug=False):
         self.debug = debug
 
@@ -23,26 +23,6 @@ class LicencePlatesParser2:
             text_from_image = self.image_to_text(cropped_image)
             parsed_text = self.parse_text(text_from_image)
         return parsed_text, debug_image
-
-    def gray_image(self, frame):
-        return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    def edged_image(self, gray_image):
-        bfilter = cv2.bilateralFilter(gray_image, 11, 17, 17)  # Noise reduction
-        edged = cv2.Canny(bfilter, 30, 200)
-        return edged
-
-    def get_contours(self, parsed_frame):
-        keypoints = cv2.findContours(parsed_frame.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        contours = imutils.grab_contours(keypoints)
-        contours = sorted(contours, key=cv2.contourArea, reverse=True)[:10]
-        location = None
-        for contour in contours:
-            approx = cv2.approxPolyDP(contour, 10, True)
-            if len(approx) == 4:
-                location = approx
-                break
-        return location
 
     def crop_plate(self, gray_image, frame, location):
         cropped_image = None
@@ -61,10 +41,35 @@ class LicencePlatesParser2:
             pass
         return cropped_image, debug_image
 
-    def image_to_text(self, cropped_image):
+    @staticmethod
+    def gray_image(frame):
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    @staticmethod
+    def edged_image(gray_image):
+        bfilter = cv2.bilateralFilter(gray_image, 11, 17, 17)  # Noise reduction
+        edged = cv2.Canny(bfilter, 30, 200)
+        return edged
+
+    @staticmethod
+    def get_contours(parsed_frame):
+        keypoints = cv2.findContours(parsed_frame.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours = imutils.grab_contours(keypoints)
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)[:10]
+        location = None
+        for contour in contours:
+            approx = cv2.approxPolyDP(contour, 10, True)
+            if len(approx) == 4:
+                location = approx
+                break
+        return location
+
+    @staticmethod
+    def image_to_text(cropped_image):
         return pytesseract.image_to_string(cropped_image, config='--psm 7')
 
-    def parse_text(self, text):
+    @staticmethod
+    def parse_text(text):
         parsed_text = re.sub(r'[^A-Z0-9]', '', text)
         if len(parsed_text) > 5:
             return parsed_text

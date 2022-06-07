@@ -6,15 +6,16 @@ from flask import jsonify
 import threading
 import time
 import cv2
-from textAreaDetector2 import LicencePlatesParser2
+from src.detectors.detector_licence_plates import DetectorLicencePlates
 
-plate_chars = "hurr"
+plate_chars = ""
 output_frame = None
 lock = threading.Lock()
 app = Flask(__name__)
 vs = VideoStream().start()
-time.sleep(2.0) # for warm up
-parser = LicencePlatesParser2()
+time.sleep(2.0)  # for warm up
+parser = DetectorLicencePlates()
+
 
 @app.route("/")
 def index():
@@ -39,11 +40,13 @@ def generate():
 
             if not flag:
                 continue
-        yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
+        yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
+
 
 @app.route("/video_feed")
 def video_feed():
     return Response(generate(), mimetype="multipart/x-mixed-replace; boundary=frame")
+
 
 @app.route("/detect")
 def detection():
@@ -51,9 +54,10 @@ def detection():
     frame = vs.read()
     text_result, debug_image = parser.run(frame)
     if text_result:
-        return jsonify({"detected":text_result})
+        return jsonify({"detected": text_result})
     else:
-        return jsonify({"detected":"None"})
+        return jsonify({"detected": "None"})
+
 
 def web_app(host, port):
     # textAreaDetector.loadNet()

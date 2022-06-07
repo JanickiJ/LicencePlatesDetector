@@ -1,12 +1,13 @@
 import time
 from tabulate import tabulate
 import cv2
-from textAreaDetector import LicencePlatesParser1
-from textAreaDetector2 import LicencePlatesParser2
+from src.detectors.detector_text_fields import DetectorTextFields
+from src.detectors.detector_licence_plates import DetectorLicencePlates
 
-PLATES_IMAGE_PATH = ['resources/plate1.jpg', 'resources/plate2.jpg', 'resources/plate3.jpg', 'resources/plate4.jpg',
-                     'resources/plate5.jpg', 'resources/plate6.jpg', 'resources/plate7.jpg', 'resources/plate8.jpg',
-                     'resources/plate9.jpg']
+PLATES_IMAGE_PATH = map(lambda source: '../../resources/' + source,
+                        ['plate1.jpg', 'plate2.jpg', 'plate3.jpg', 'plate4.jpg',
+                         'plate5.jpg', 'plate6.jpg', 'plate7.jpg', 'plate8.jpg',
+                         'plate9.jpg'])
 PLATES_TEXT = ['PO4PJ54', 'PO6SU70', 'DL4929E', 'PO8MH80', 'PO4PH36', 'PZ4444M', 'WE286YU', 'TOSZTOS', 'S2YBKI']
 PLATES_IMAGE = [cv2.imread(path) for path in PLATES_IMAGE_PATH]
 
@@ -23,28 +24,18 @@ def measurement(f):
 
 
 @measurement
-def detector1():
-    parser = LicencePlatesParser2(False)
+def detection(detector):
     detections = []
     for image in PLATES_IMAGE:
-        text_result, debug_image = parser.run(image)
+        text_result, debug_image = detector.run(image)
         detections.append(text_result)
     return detections
 
 
-@measurement
-def detector2():
-    parser = LicencePlatesParser1()
-    detections = []
-    for image in PLATES_IMAGE:
-        text_results = parser.run(image)
-        detections.append(text_results)
-    return detections
-
-
 def test():
-    result1, time1 = detector1()
-    result2, time2 = detector2()
+    result1, time1 = detection(DetectorLicencePlates(False))
+    result2, time2 = detection(DetectorTextFields(False))
+
     table = [['detector1', 'detector2', 'real']]
     for idx, plates_text in enumerate(PLATES_TEXT):
         table.append([result1[idx], result2[idx], plates_text])

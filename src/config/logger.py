@@ -4,7 +4,7 @@ import logging
 class Logger:
     def __init__(self):
         # if running on startup change to "/home/pi/code/LicencePlatesDetector/logs.txt"
-        self.log_file_path = "logs.txt"
+        self.log_file_path = "../../logs.txt"
         self.formatter_string = '%(asctime)s [%(levelname)s]: %(message)s'
 
     def get_console_logger(self):
