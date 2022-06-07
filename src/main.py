@@ -6,7 +6,7 @@ from flask import jsonify
 import threading
 import time
 import cv2
-from src.detectors.detector_licence_plates import DetectorLicencePlates
+from detectors.detector_licence_plates import DetectorLicencePlates
 
 plate_chars = ""
 output_frame = None
